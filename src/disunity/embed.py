@@ -80,7 +80,7 @@ class Embed:
 
         return self 
 
-    def build(self) -> dict:
+    def to_dict(self) -> dict:
         self.__built['type'] = "rich"
         self.__built['title'] = self.title
         self.__built['description'] = self.description

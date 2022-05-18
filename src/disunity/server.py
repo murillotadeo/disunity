@@ -1,3 +1,4 @@
+import asyncio
 from quart.flask_patch.globals import request
 from quart.json import jsonify
 from nacl.signing import VerifyKey
@@ -7,10 +8,12 @@ import aiohttp
 import requests
 import time
 import quart
+import importlib
 
 from typing import Optional
 
-from . import identifiers, cache
+from . import identifiers, cache, errors
+from .models.context import DisunityCommandContext, DisunityComponentContext
 
 class DisunityServer(quart.Quart):
     """
@@ -41,6 +44,7 @@ class DisunityServer(quart.Quart):
         self.config['BOT_TOKEN'] = bot_token
         self.config['CREDENTIALS_EXPIRE_IN'] = 0 # Set to 0 to initiate credentials later on
         self._cache: cache.ApplicationCache = cache.ApplicationCache()
+        self.add_url_rule('/interactions', 'interactions', self.interactions, methods=['POST'])
 
     def verify_request(self, request):
         """Verifies the incoming request using PyNaCl"""
@@ -61,7 +65,7 @@ class DisunityServer(quart.Quart):
 
 
 
-    async def interactions_endpoint(self):
+    async def interactions(self):
         """The interactions handler. All interactions are sent here"""
 
         self.verify_request(request)
@@ -71,10 +75,42 @@ class DisunityServer(quart.Quart):
             return jsonify({"type": 1})
 
         elif rjson['type'] == 2:
-            ...
+
+            context = DisunityCommandContext(self, rjson)
+            command: identifiers.DisunityCommand = self._cache.commands[str(context.type)].get(context.command_name, None)
+            if command is None:
+                return jsonify({"type": 4, "data": {"content": "This command was not found within the bot", "flags": 64}})
+            
+            if command.requires_ack:
+                resp = {"type": 5}
+                if command.requires_ephemeral:
+                    resp['data'] = {"flags": 64}
+                
+                asyncio.create_task(command(context=context))
+                return jsonify(resp)
+
+            maybe_json = await command(context)
+            return jsonify(maybe_json)
 
         elif rjson['type'] == 3:
-            ...
+
+            context = DisunityComponentContext(self, rjson)
+            component: identifiers.DisunityComponent = self._cache.components.get(str(context.custom_id).split('-')[0], None)
+
+            if component is None:
+                return jsonify({"type": 4, "data": {"content": "This component does not exist", "flags": 64}})
+
+            if component.requires_ack:
+                resp = {"type": 6}
+                if component.requires_ephemeral:
+                    resp['data'] = {"flags": 64}
+                
+                context.acked = True
+                asyncio.create_task(component(context=context))
+                return jsonify(resp)
+
+            maybe_json = await component(context)
+            return jsonify(maybe_json)
 
 
     def __generate_client_credentials(self):
@@ -103,7 +139,7 @@ class DisunityServer(quart.Quart):
         return {"Authorization": "Bot " + self.config['CLIENT_CREDENTIALS_TOKEN']}
 
 
-    async def make_https_request(self, method: str, url: str, headers: Optional[dict] = None, payload: Optional[dict] = None):
+    async def make_http_request(self, method: str, url: str, headers: Optional[dict] = None, payload: Optional[dict] = None):
         """
             Performs a HTTP request using the given parameters
 
@@ -137,9 +173,26 @@ class DisunityServer(quart.Quart):
 
         async with aiohttp.request(method, url, headers=_headers, json=payload) as maybe_response:
             if not str(maybe_response.status).startswith('20'):
-                pass
+                raise errors.HTTPRequestError(maybe_response.status, await maybe_response.json())
 
             try:
                 return await maybe_response.json()
             except Exception as e:
                 return e
+
+    def load_package(self, package_path):
+        package = importlib.import_module(package_path)
+        setup_func = getattr(package, 'setup')
+
+        setup_func(self)
+
+    def register_package(self, package_class):
+        contents = package_class._open()
+        for item in contents:
+            if isinstance(item, identifiers.DisunityCommand):
+                self._cache.cache_command(item)
+            elif isinstance(item, identifiers.DisunityComponent):
+                self._cache.cache_component(item)
+
+    async def register_component(self, ctx, custom_id, coroutine, timeout: float = 0.0, is_single_use: bool = True, requires_ack: bool = False, requires_ephemeral: bool = False):
+        self._cache.cache_component(identifiers.DisunityComponent(ctx, custom_id, coroutine, timeout, is_single_use, requires_ack, requires_ephemeral))

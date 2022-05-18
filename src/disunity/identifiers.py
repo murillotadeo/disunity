@@ -1,5 +1,38 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable
+
+class DisunityComponent:
+    def __init__(
+        self,
+        name: str,
+        coroutine: Callable,
+        requires_ack: bool = False,
+        requires_ephemeral: bool = False,
+        timeout: float = 0.0
+    ):
+        self.name = name
+        self.requires_ack = requires_ack
+        self.requires_ephemeral = requires_ephemeral
+        self.timeout = timeout if timeout > 0.0 else None
+        self.coroutine = coroutine
+
+    async def __call__(self, context):
+        if self.timeout is not None:
+            if (
+                (datetime.now(timezone.utc) - datetime.fromisoformat(context.raw['message']['timestamp'])).total_seconds() > self.timeout
+            ):
+                if not self.requires_ack:
+                    return {"type": 4, "data": {"content": "This component has timed out", "flags": 64}}
+
+        try:
+            rjson = await self.coroutine(context)
+            if type(rjson) == dict:
+                return rjson
+        except Exception as e:
+            if not self.requires_ack:
+                print(e)
+                return {"type": 4, "data": {"content": "This there was an error when running this component, please contact the application developers", "flags": 64}}
+            print(e)
 
 class DisunityCommand:
     def __init__(
@@ -30,49 +63,3 @@ class DisunityCommand:
             if not self.requires_ack:
                 return await context.callback("There was an error when executing this command, plase contact the application developers.", ephemeral=True)
             print(e)
-
-    
-class DisunityComponent:
-    def __init__(
-        self,
-        parent_context,
-        custom_id: str,
-        coroutine: Callable,
-        timeout: float = 0.0,
-        is_single_use: bool = True,
-        requires_ack: bool = False,
-        requires_ephemeral: bool = False
-    ):
-        
-        self.parent = parent_context
-        self.custom_id = custom_id
-        self.coroutine = coroutine
-        self.timeout = ((datetime.utcnow() - datetime.fromtimestamp(0)).total_seconds() + timeout) if timeout > 0.0 else None
-        self.is_single_use: bool = is_single_use
-        self.requires_ack: bool = requires_ack
-        self.requires_ephemeral: bool = requires_ephemeral
-
-    async def __call__(self, app, context):
-        if self.timeout is not None:
-            if (datetime.utcnow() - datetime.fromtimestamp(0)).total_seconds() > self.timeout:
-                del app._cache.components[self.custom_id]
-
-                if self.requires_ack:
-                    return await context.reply("This component has timed out.")
-                else:
-                    return await context.callback("This component has timed out.", ephemeral=True)
-                
-        if self.is_single_use:
-            del app._cache.components[self.custom_id]
-        
-        try:
-
-            rjson = await self.coroutine(context)
-            if type(rjson) == dict:
-                return rjson
-
-        except Exception as e:
-            if not self.requires_ack:
-                return await context.callback("There was an error when executing this component, please contact the application developers", ephemeral=True)
-            print(e)
-

@@ -79,13 +79,14 @@ class DisunityServer(quart.Quart):
             context = DisunityCommandContext(self, rjson)
             command: identifiers.DisunityCommand = self._cache.commands[str(context.type)].get(context.command_name, None)
             if command is None:
-                return jsonify({"type": 4, "data": {"content": "This command was not found within the bot", "flags": 64}})
+                raise errors.CommandNotFound(f"Command: {context.command_name} was not found")
             
             if command.requires_ack:
                 resp = {"type": 5}
                 if command.requires_ephemeral:
                     resp['data'] = {"flags": 64}
                 
+                context.acked = True                
                 asyncio.create_task(command(context=context))
                 return jsonify(resp)
 
@@ -98,7 +99,7 @@ class DisunityServer(quart.Quart):
             component: identifiers.DisunityComponent = self._cache.components.get(str(context.custom_id).split('-')[0], None)
 
             if component is None:
-                return jsonify({"type": 4, "data": {"content": "This component does not exist", "flags": 64}})
+                raise errors.ComponentNotFound(f"Component: {str(context.custom_id).split('-')[0]} was not found")
 
             if component.requires_ack:
                 resp = {"type": 6}
@@ -136,7 +137,7 @@ class DisunityServer(quart.Quart):
 
         if self.config['CREDENTIALS_EXPIRE_IN'] < time.time():
             self.__generate_client_credentials()
-        return {"Authorization": "Bot " + self.config['CLIENT_CREDENTIALS_TOKEN']}
+        return {"Authorization": "Bearer " + self.config['CLIENT_CREDENTIALS_TOKEN']}
 
 
     async def make_http_request(self, method: str, url: str, headers: Optional[dict] = None, payload: Optional[dict] = None):
@@ -193,6 +194,3 @@ class DisunityServer(quart.Quart):
                 self._cache.cache_command(item)
             elif isinstance(item, identifiers.DisunityComponent):
                 self._cache.cache_component(item)
-
-    async def register_component(self, ctx, custom_id, coroutine, timeout: float = 0.0, is_single_use: bool = True, requires_ack: bool = False, requires_ephemeral: bool = False):
-        self._cache.cache_component(identifiers.DisunityComponent(ctx, custom_id, coroutine, timeout, is_single_use, requires_ack, requires_ephemeral))

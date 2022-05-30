@@ -12,7 +12,7 @@ class Package:
         self.commands = []
     
     @classmethod
-    def command(self, name: str, _type: int, requires_ephemeral: bool = False, requires_ack: bool = True):
+    def command(self, name: str, _type: int, requires_ephemeral: bool = False, requires_ack: bool = False):
         def decorator(coroutine):
             actual = coroutine
             if isinstance(actual, staticmethod):

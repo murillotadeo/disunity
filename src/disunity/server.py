@@ -1,4 +1,3 @@
-import asyncio
 from quart.flask_patch.globals import request
 from quart.json import jsonify
 from nacl.signing import VerifyKey
@@ -9,11 +8,11 @@ import requests
 import time
 import quart
 import importlib
+import asyncio
 
 from typing import Optional
-
-from . import identifiers, cache, errors
-from .models.context import DisunityCommandContext, DisunityComponentContext
+from . import identifiers, cache, errors, utils
+from .models.context import CommandContext, ComponentContext
 
 class DisunityServer(quart.Quart):
     """
@@ -23,14 +22,11 @@ class DisunityServer(quart.Quart):
         ----------
         public_key: str
             The application's public key that can be found in the Discord developer portal
-        
         client_secret: str
             The client secret which can be found in the Discord developer portal. It is used
             to generate the Bearer client credentials for HTTPS headers.
-        
         client_id: int
             The id of the application. Used to generate Bearer client credentials for HTTPS headers.
-
         bot_token: Optional[str]
             The bot token tied to this application if applicable. Only pass in token if you expect
             to use any other part of the Discord API that is not interactions based. 
@@ -46,77 +42,99 @@ class DisunityServer(quart.Quart):
         self._cache: cache.ApplicationCache = cache.ApplicationCache()
         self.add_url_rule('/interactions', 'interactions', self.interactions, methods=['POST'])
 
-    def verify_request(self, request):
-        """Verifies the incoming request using PyNaCl"""
-
+    
+    def verify(self, request):
         _key = VerifyKey(bytes.fromhex(self.config['CLIENT_PUBLIC_KEY']))
-
-        try:
-            signature, timestamp = request.headers['X-Signature-Ed25519'], request.headers['X-Signature-Timestamp']
-        except KeyError:
-            quart.abort(401, "Invalid request headers")
+        signature,timestamp = request.headers['X-Signature-Ed25519'], request.headers['X-Signature-Timestamp']
 
         body = request.data.decode('utf-8')
 
         try:
-            _key.verify((timestamp + body).encode(), bytes.fromhex(signature))
+            _key.verify((timestamp+body).encode(), bytes.fromhex(signature))
         except BadSignatureError:
-            quart.abort(401, "Invalid request signature")
-
-
+            quart.abort(401, 'Invalid request signature')
+            
 
     async def interactions(self):
-        """The interactions handler. All interactions are sent here"""
+        self.verify(request)
+        received = request.json
+        received['data']['injected'] = {}
 
-        self.verify_request(request)
-        rjson = request.json
-
-        if rjson['type'] == 1:
+        if received['type'] == utils.T_PING:
             return jsonify({"type": 1})
-
-        elif rjson['type'] == 2:
-
-            context = DisunityCommandContext(self, rjson)
-            command: identifiers.DisunityCommand = self._cache.commands[str(context.type)].get(context.command_name, None)
+        
+        elif received['type'] == utils.T_SLASH_COMMAND:
+            command = self._cache.commands['2'].get(received['data']['name'], None)
             if command is None:
-                raise errors.CommandNotFound(f"Command: {context.command_name} was not found")
+                raise errors.CommandNotFound(received['data']['name'])
             
-            if command.requires_ack:
-                resp = {"type": 5}
-                if command.requires_ephemeral:
-                    resp['data'] = {"flags": 64}
-                
-                context.acked = True                
-                asyncio.create_task(command(context=context))
-                return jsonify(resp)
+            coroutine: identifiers.Command | identifiers.SubCommand | None = None
+            match received['data']:
+                case {"options": [{"name": name, "options": options, "type": 2}]}: # Sub command group
+                    if not isinstance(command, identifiers.CacheableSubCommand):
+                        raise errors.InvalidMethodUse("Commands with sub commands must be registered using the Package.sub decorator.")
 
-            maybe_json = await command(context)
-            return jsonify(maybe_json)
+                    coroutine = command.map['groups'][name]['sub_commands'].get(options[0]['name'], None)
+                    
+                    received['data']['injected'] = options[0]['options']
 
-        elif rjson['type'] == 3:
+                case {"options": {"name": name, "options": options, "type": 1}}: # Sub command:
+                    if not isinstance(command, identifiers.CacheableSubCommand):
+                        raise errors.InvalidMethodUse("Commands with sub commands must be registered using the Package.sub decorator.")
+                    
+                    coroutine = command.map['sub_commands'].get(name, None)
+                    
+                    received['data']['injected'] = options
 
-            context = DisunityComponentContext(self, rjson)
-            component: identifiers.DisunityComponent = self._cache.components.get(str(context.custom_id).split('-')[0], None)
+                case {"options": options}: # regular command with options
+                    coroutine = command
+                    received['data']['injected'] = options
+
+                case _: # Default to regular, no options command
+                    coroutine = command
+                    received['data']['injected'] = []
+                    
+            context = CommandContext(self, received)
+            if coroutine is None:
+                raise errors.CommandNotFound(context.command_name)
+
+
+            if isinstance(coroutine, identifiers.Command):
+                if coroutine.requires_ack:
+                    response = {"type": 5}
+                    if coroutine.requires_ephemeral:
+                        response = {"type": 5,"data": {"flags": 64}}
+
+                    asyncio.create_task(coroutine(context))
+                    return jsonify(response)
+
+            response = await coroutine(context)
+            return jsonify(response)
+
+        elif received['type'] == utils.T_COMPONENT:
+            
+            context = ComponentContext(self, received)
+            component: identifiers.Component = self._cache.components.get(str(context.custom_id).split('-')[0], None)
 
             if component is None:
-                raise errors.ComponentNotFound(f"Component: {str(context.custom_id).split('-')[0]} was not found")
+                raise errors.ComponentNotFound(component.custom_id)
 
             if component.requires_ack:
-                resp = {"type": 6}
+                response = {"type": 6}
                 if component.requires_ephemeral:
-                    resp['data'] = {"flags": 64}
-                
+                    response = {"type": 6, "data": {"flags": 64}}
+
                 context.acked = True
-                asyncio.create_task(component(context=context))
-                return jsonify(resp)
+                asyncio.create_task(component(context))
+                return jsonify(response)
 
-            maybe_json = await component(context)
-            return jsonify(maybe_json)
+            maybe_response = await component(context)
+            return jsonify(maybe_response)
 
+        elif received['type'] == utils.T_MODAL_SUBMIT:
+            pass # Implement later
 
     def __generate_client_credentials(self):
-        """Called when Bearer client credentials need to be generated"""
-
         response = requests.post(
             "https://discord.com/api/" + "oauth2/token",
             data={
@@ -131,10 +149,7 @@ class DisunityServer(quart.Quart):
         self.config['CLIENT_CREDENTIALS_TOKEN'] = data['access_token']
         self.config['CREDENTIALS_EXPIRE_IN'] = (time.time() + data['expires_in'] / 2)
 
-
     def auth(self):
-        """Returns the application's headers"""
-
         if self.config['CREDENTIALS_EXPIRE_IN'] < time.time():
             self.__generate_client_credentials()
         return {"Authorization": "Bearer " + self.config['CLIENT_CREDENTIALS_TOKEN']}
@@ -143,7 +158,6 @@ class DisunityServer(quart.Quart):
     async def make_http_request(self, method: str, url: str, headers: Optional[dict] = None, payload: Optional[dict] = None):
         """
             Performs a HTTP request using the given parameters
-
             Parameters
             ----------
             method: str
@@ -152,11 +166,9 @@ class DisunityServer(quart.Quart):
             url: str
                 The url to make the request to. If performing a request to discord, do not include
                 'https://discord.com/api/v10', it will be automatically added.
-
             headers: Optional[dict]
                 The headers to use for the request. If none are given, the application's Bearer 
                 client credentials will be used.
-
             payload: Optional[dict]
                 The payload to send to the url. Only applicable for POST, PUT, and PATCH requests.
         """
@@ -179,18 +191,15 @@ class DisunityServer(quart.Quart):
             try:
                 return await maybe_response.json()
             except Exception as e:
-                return e
+                raise e
 
     def load_package(self, package_path):
         package = importlib.import_module(package_path)
-        setup_func = getattr(package, 'setup')
+        setup = getattr(package, 'setup')
 
-        setup_func(self)
+        setup(self)
 
     def register_package(self, package_class):
         contents = package_class._open()
         for item in contents:
-            if isinstance(item, identifiers.DisunityCommand):
-                self._cache.cache_command(item)
-            elif isinstance(item, identifiers.DisunityComponent):
-                self._cache.cache_component(item)
+            self._cache.cache_item(item)

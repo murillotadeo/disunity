@@ -78,7 +78,7 @@ class DisunityServer(quart.Quart):
                     
                     received['data']['injected'] = options[0]['options']
 
-                case {"options": {"name": name, "options": options, "type": 1}}: # Sub command:
+                case {"options": [{"name": name, "options": options, "type": 1}]}: # Sub command:
                     if not isinstance(command, identifiers.CacheableSubCommand):
                         raise errors.InvalidMethodUse("Commands with sub commands must be registered using the Package.sub decorator.")
                     

@@ -14,7 +14,7 @@ setup(
         "Issue tracker": "https://github.com/murillotadeo/disunity/issues",
         "Source": "https://github.com/murillotadeo/disunity"
     },
-    version="0.0.6",
+    version="0.0.8",
     package_dir={'': 'src'},
     packages=setuptools.find_packages('src'),
     license="MIT",

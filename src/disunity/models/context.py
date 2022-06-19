@@ -22,8 +22,9 @@ class CommandContext:
         self.type = received.get('type', None)
         self.acked = False
         self.options = {}
-        for option in received['data'].get('injected', []):
-            self.options[option['name']] = option['value']
+        if 'data' in received:
+            for option in received['data'].get('injected', []):
+                self.options[option['name']] = option['value']
 
 
     async def callback(self, content: str = '', embeds: list[Embed] | Embed = [], components: list[ActionRow] | ActionRow = [], allowed_mentions: list = [], ephemeral: bool = False, response_type: int = utils.CHANNEL_WITH_SOURCE):
@@ -68,7 +69,7 @@ class CommandContext:
         return message_body
 
     
-    async def follwup(self, content: str = '', embeds: list[Embed] | Embed = [], components: list[ActionRow] | ActionRow = [], ephemeral: bool = False):
+    async def followup(self, content: str = '', embeds: list[Embed] | Embed = [], components: list[ActionRow] | ActionRow = [], ephemeral: bool = False):
         """
             Used to create a follow up response to an already acked interaction.
             Parameters

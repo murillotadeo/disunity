@@ -65,17 +65,21 @@ class Package:
     def _open(self):
         to_return = []
         for m in [attr[1] for attr in inspect.getmembers(self, inspect.iscoroutinefunction) if not attr[0].startswith('__') and not attr[0].endswith('__')]:
-            if m.__command__:
-                container = Command(m.__data__[0], m.__data__[1], m, m.__data__[2], m.__data__[3])
-                to_return.append(container)
-            
-            elif m.__sub_command__:
-                container = TopLevelSubCommand(m.__data__[0], m, m.__data__[1], m.__data__[2])
-                to_return.append(container)
-            
-            elif m.__component__:
-                container = Component(m.__data__[0], m, m.__data__[1], m.__data__[2], m.__data__[3])
-                to_return.append(container)
+            try:
 
+                if m.__command__:
+                    container = Command(m.__data__[0], m.__data__[1], m, m.__data__[2], m.__data__[3])
+                    to_return.append(container)
+            
+                elif m.__sub_command__:
+                    container = TopLevelSubCommand(m.__data__[0], m, m.__data__[1], m.__data__[2])
+                    to_return.append(container)
+            
+                elif m.__component__:
+                    container = Component(m.__data__[0], m, m.__data__[1], m.__data__[2], m.__data__[3])
+                    to_return.append(container)
+
+            except AttributeError:
+                continue
 
         return to_return

@@ -16,7 +16,6 @@ class ApplicationCache:
                 self.commands['2'][str(item.name)] = cacheable
 
         elif isinstance(item, Command):
-            print(item.name)
             self.commands['2'][str(item.name)] = item
         elif isinstance(item, Component):
             self.components[str(item.name)] = item

@@ -28,9 +28,10 @@ class Button:
         label: str,
         style: Optional[int] = ButtonStyles.PRIMARY,
         emoji: Optional[dict] = {},
-        url: Optional[str] = None
+        url: Optional[str] = None,
+        disabled: bool = False
     ):
-        self.dict = {"type": 2, "custom_id": custom_id, "label": label, "style": style, "emoji": emoji}
+        self.dict = {"type": 2, "custom_id": custom_id, "label": label, "style": style, "emoji": emoji, "disabled": disabled}
 
         if self.dict['style'] == ButtonStyles.LINK and url is not None:
             self.dict['url'] = url
@@ -59,9 +60,10 @@ class SelectMenu:
         self,
         custom_id: str,
         options: List[SelectMenuOption],
-        placeholder: Optional[str] = ""
+        placeholder: Optional[str] = "",
+        disabled: bool = False
     ):
-        self.dict = {"type": 3, "custom_id": custom_id, "options": [option.to_dict() for option in options], "placeholder": placeholder}
+        self.dict = {"type": 3, "custom_id": custom_id, "options": [option.to_dict() for option in options], "placeholder": placeholder, "disabled": disabled}
 
     def to_dict(self):
         return self.dict

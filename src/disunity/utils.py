@@ -15,7 +15,7 @@ T_SLASH_COMMAND = 2
 T_COMPONENT = 3
 T_MODAL_SUBMIT = 5
 
-__version__ = '0.0.8'
+__version__ = '0.0.11'
 
 class DefaultAvatars(Enum):
     blurple = 0

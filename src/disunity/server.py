@@ -58,7 +58,6 @@ class DisunityServer(quart.Quart):
     async def interactions(self):
         self.verify(request)
         received = request.json
-        received['data']['injected'] = {}
 
         if received['type'] == utils.T_PING:
             return jsonify({"type": 1})

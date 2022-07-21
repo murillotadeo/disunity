@@ -1,90 +1,93 @@
 from typing import Callable
 from datetime import datetime, timezone
-from .errors import InvocationError
-from . import utils
 
+class SubOption:
+    """
+        Represents a sub command option 
+        
+        Parameters
+        ----------
+        name : str
+            The name of the sub command 
+        requires_ack : bool
+            Does the command need to be acked (response using followup). Default
+            to False
+        requires_ephemeral : bool
+            Only required if requires_ack is true. Sets the initial ack message 
+            to show ephemerally so following responses can be ephemeral.
+    """
+    def __init__(
+        self,
+        name: str,
+        requires_ack: bool = False,
+        requires_ephemeral: bool = False 
+    ):
+        self.name: str = name
+        self.ack: bool = requires_ack
+        self.ephemeral: bool = requires_ephemeral
 
-class SubCommand:
+class SubCommand(SubOption):
     def __init__(
         self,
         name: str,
         coroutine: Callable,
-
+        requires_ack: bool = False,
+        requires_ephemeral: bool = False 
     ):
-        self.name = name 
-        self.coroutine = coroutine
-
+        super().__init__(name, requires_ack, requires_ephemeral)
+        self.name: str = name
+        self.coroutine: Callable = coroutine
 
     async def __call__(self, context):
         try:
             response = await self.coroutine(context)
-            if response is not None and type(response) == dict:
+            if isinstance(response, dict):
                 return response
         except Exception as e:
-            raise InvocationError(self.coroutine.__qualname__, e)
-
+            context._app.error_handler(e)
 
 class TopLevelSubCommand:
     def __init__(
         self,
         name: str,
         coroutine: Callable,
-        sub_commands: list[str] | str,
-        group_name: str | None,
+        sub_commands: list[str] | list[SubCommand] | SubCommand | str = [],
+        group: str | None = None 
     ):
-        self.name = name
-        self.coroutine = coroutine
-        self.group_name = group_name
-        self.sub_commands: list[str] | str = []
-        if isinstance(sub_commands, list):
-            for sub in list(sub_commands):
-                self.sub_commands.append(SubCommand(sub, self.coroutine))
-        else:
-            self.sub_commands.append(SubCommand(sub_commands, self.coroutine))
-        
+        self.name: str = name
+        self.coroutine: Callable = coroutine
+        self.sub_commands = []
+        self.group = group
+
+        if isinstance(sub_commands, str):
+            self.sub_commands.append(SubCommand(sub_commands, self.coroutine, False, False))
+        elif isinstance(sub_commands, list):
+            for sub in sub_commands:
+                if isinstance(sub, str):
+                    self.sub_commands.append(SubCommand(sub, self.coroutine, False, False))
+                elif isinstance(sub, SubOption):
+                    self.sub_commands.append(SubCommand(sub.name, self.coroutine, sub.ack, sub.ephemeral))
+        elif isinstance(sub_commands, SubOption):
+            self.sub_commands.append(SubCommand(sub_commands.name, self.coroutine, sub_commands.ack, sub_commands.ephemeral))
 
 class CacheableSubCommand:
     def __init__(
         self,
-        name: str
+        name: str 
     ):
-        self.name = name
-        self.map = {"sub_commands": {}, "groups": {}}
+        self.name: str = name
+        self.map = {"sub_commands": {}}
 
-    def _map(self, incoming: TopLevelSubCommand):
-        if incoming.group_name is None:
-            for sub_command in incoming.sub_commands:
-                self.map['sub_commands'][str(sub_command.name)] = sub_command
+    def add(self, incoming: TopLevelSubCommand):
+        if incoming.group is not None:
+            self.map[str(incoming.group)] = {}
+            for sub in incoming.sub_commands:
+                self.map[str(incoming.group)][str(sub.name)] = sub
         else:
-            self.map['groups'][str(incoming.group_name)] = {"sub_commands": {}}
-            for sub_command in incoming.sub_commands:
-                self.map['groups'][str(incoming.group_name)]['sub_commands'][str(sub_command.name)] = sub_command
+            for sub in incoming.sub_commands:
+                self.map["sub_commands"][str(sub.name)] = sub
 
-
-class Command:
-    def __init__(
-        self,
-        name: str,
-        command_type: int,
-        coroutine: Callable,
-        requires_ack: bool,
-        requires_ephemeral: bool
-    ):
-        self.name = name
-        self.type = command_type
-        self.coroutine = coroutine
-        self.requires_ack = requires_ack
-        self.requires_ephemeral = requires_ephemeral
-
-    async def __call__(self, context):
-        """Invokes the coroutine attached to the command."""
-        try:
-            response = await self.coroutine(context)
-            if response is not None and type(response) == dict:
-                return response
-        except Exception as e:
-            raise InvocationError(self.coroutine.__qualname__, e)
-
+        return self
 
 class Component:
     def __init__(
@@ -95,23 +98,43 @@ class Component:
         requires_ephemeral: bool = False,
         timeout: float = 0.0
     ):
-        self.name = name
-        self.coroutine = coroutine
-        self.requires_ack = requires_ack
-        self.requires_ephemeral = requires_ephemeral
-        self.timeout = timeout if timeout > 0.0 else None
-
+        self.name: str = name
+        self.coroutine: Callable = coroutine
+        self.ack: bool = requires_ack
+        self.ephemeral: bool = requires_ephemeral
+        self.timeout: float | None = None if timeout <= 0.0 else timeout 
+    
     async def __call__(self, context):
-        if self.timeout is not None:
-            if ((datetime.now(timezone.utc) - datetime.fromisoformat(context.raw['message']['timestamp'])).total_seconds() > self.timeout):
-                if not self.requires_ack:
-                    return {"type": utils.CHANNEL_WITH_SOURCE, "data": {"content": "This component has timed out", "flags": 64}}
+        if isinstance(self.timeout, float):
+            if ((datetime.now(timezone.utc) - datetime.fromisoformat(context.raw["message"]["timestamp"])).total_seconds() > self.timeout):
+                if not self.ack:
+                    return {"type": 4, "data": {"content": "This component has timed out.", "flags": 64}}
 
         try:
             response = await self.coroutine(context)
-            if response is not None and type(response) == dict:
+            if isinstance(response, dict):
                 return response
         except Exception as e:
-            raise InvocationError(self.coroutine.__qualname__, e)
+            context._app.error_handler(e)
 
+class Command:
+    def __init__(
+        self,
+        name: str,
+        coroutine: Callable,
+        requires_ack: bool = False,
+        requires_ephemeral: bool = False 
+    ):
+        self.name: str = name
+        self.command_type: int = 2
+        self.coroutine: Callable = coroutine
+        self.ack: bool = requires_ack
+        self.ephemeral: bool = requires_ephemeral
 
+    async def __call__(self, context):
+        try:
+            response = await self.coroutine(context)
+            if isinstance(response, dict):
+                return response
+        except Exception as e:
+            context._app.error_handler(e)

@@ -1,89 +1,98 @@
 from __future__ import annotations
-from typing import Any, Optional 
 
+class EmptyEmbedError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 class Embed:
     def __init__(
-        self, 
-        color = None,
-        title: Optional[Any] = None,
-        description: Optional[Any] = None,
+        self,
+        title: None | str = None,
+        description: None | str = None,
+        color: None | int = None,
     ):
+        self.__json: dict = {"type": "rich", "color": color}
 
-        self.color = color
-        self.title: Optional[str] = title
-        self.description: Optional[str] = description
-        self.__built = {}
-    
-    def add_field(self, name: str = None, value: str = None, inline: Optional[bool] = False):
-        """Adds a field object to the Embed"""
-        if name is None or value is None:
-            _val = "name" if name is None else "value"
-            raise ValueError(f"Embed.field.{_val} expected string, received NoneType")
+        self.title: None | str = title
+        self.description: None | str = description
+        self.color: None | int = color
 
-        if name is None and value is None:
-            raise ValueError("Embed.field object cannot be empty")
+        if self.title is not None:
+            self.title = str(self.title)
+            self.__json["title"] = self.title
 
-        try:
-            self.__built['fields'].append({"name": name, "value": value, "inline": inline})
-        except KeyError:
-            self.__built['fields'] = [{"name": name, "value": value, "inline": inline}]
 
-        return self
+        if self.description is not None:
+            self.description = str(self.description)
+            self.__json["description"] = self.description
 
-    def set_footer(self, text: str = None, icon_url: str = None):
-        if text is None and icon_url is None:
-            raise ValueError("Embed.footer object cannot be empty")
+    @property
+    def fields(self) -> None | list[dict]:
+        return self.__json.get("fields", None)
 
-        try:
-            self.__built['footer']['text'] = text
-            if icon_url is not None:
-                self.__built['footer']['icon_url'] = icon_url
-        except KeyError:
-            self.__built['footer'] = {"text": text}
-            if icon_url is not None:
-                self.__built['footer']['icon_url'] = icon_url
+    def add_field(self, name: str, value: str, inline: bool = False) -> Embed:
+        if not bool(name) or not bool(value):
+            raise EmptyEmbedError("Embed field cannot contain an empty value")
+        
+        if 'fields' not in self.__json:
+            self.__json["fields"] = []
 
-        return self
+        self.__json["fields"].append({"name": name, "value": value, "inline": inline})
+        return self 
 
-    def set_author(self, name: str = None, url: str = None, icon_url: str = None):
-        if name is None and url is None and icon_url is None:
-            raise ValueError("Embed.author object cannot be empty.")
+    @property
+    def footer(self) -> None | dict:
+        return self.__json.get("footer", None)
 
-        try:
-            if name is not None:
-                self.__built['author']['name'] = name
-            if url is not None:
-                self.__built['author']['url'] = url
-            if icon_url is not None:
-                self.__built['author']['icon_url'] = icon_url
-        except KeyError:
-            self.__built['author'] = {}
-            if name is not None:
-                self.__built['author']['name'] = name
-            if url is not None:
-                self.__built['author']['url'] = url
-            if icon_url is not None:
-                self.__built['author']['icon_url'] = icon_url
+    def set_footer(self, text: None | str = None, icon_url: None | str = None) -> Embed:
+        if 'footer' not in self.__json:
+            self.__json["footer"] = {}
 
-        return self
+        if text is not None:
+            self.__json["footer"]["text"] = str(text)
 
-    def set_image(self, image_url: str):
-        self.__built['image'] = {}
-        self.__built['image']['url'] = str(image_url)
-
-        return self
-
-    def set_thumbnail(self, thumbnail_url: str):
-        self.__built['thumbnail'] = {}
-        self.__built['thumbnail']['url'] = thumbnail_url
+        if icon_url is not None:
+            self.__json["footer"]["icon_url"] = str(icon_url)
 
         return self 
 
-    def to_dict(self) -> dict:
-        self.__built['type'] = "rich"
-        self.__built['title'] = self.title
-        self.__built['description'] = self.description
-        self.__built['color'] = self.color
+    @property
+    def image(self) -> None | dict:
+        return self.__json.get("url", None)
 
-        return self.__built
+    def set_image(self, image_url: str) -> Embed:
+        if 'image' not in self.__json:
+            self.__json["image"] = {}
+
+        self.__json["image"]["url"] = str(image_url)
+        return self
+
+    @property
+    def thumbnail(self) -> None | dict:
+        return self.__json.get("thumbnail", None)
+
+    def set_thumbnail(self, thumbnail_url: str) -> Embed:
+        if 'thumbnail' not in self.__json:
+            self.__json["thumbnail"] = {}
+
+        self.__json["thumbnail"]["url"] = str(thumbnail_url)
+        return self
+
+    @property
+    def author(self) -> None | dict:
+        return self.__json.get("author", None)
+
+    def set_author(self, name: str, url: None | str = None, icon_url: None | str = None) -> Embed:
+        if 'author' not in self.__json:
+            self.__json["author"] = {"name": str(name)}
+
+        if url is not None:
+            self.__json["author"]["url"] = str(url)
+
+        if icon_url is not None:
+            self.__json["author"]["icon_url"] = str(icon_url)
+
+        return self
+
+    def as_dict(self) -> dict:
+        return self.__json

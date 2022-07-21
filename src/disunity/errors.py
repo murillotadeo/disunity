@@ -1,23 +1,15 @@
-class ComponentNotFound(Exception):
-    def __init__(self, component):
-        super().__init__(f"{component} was not found.")
+class InvalidMethodUse(Exception):
+    def __init__(self, reason):
+        super().__init__(reason)
 
 class CommandNotFound(Exception):
     def __init__(self, command):
-        super().__init__(f"{command} was not found.")
+        super().__init__("Command with name {} could not be found".format(command))
+
+class ComponentNotFound(Exception):
+    def __init__(self, component):
+        super().__init__("No listener for components with name {} exist".format(component))
 
 class HTTPRequestError(Exception):
-    def __init__(self, status_code, error):
-        super().__init__(f"Request returned with status: {status_code}. Request body: {error}")
-
-class InvocationError(Exception):
-    def __init__(self, coroutine_name, error):
-        super().__init__(f"Error when running {coroutine_name}: {error}")
-
-class InvalidMethodUse(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class NotImplementedError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
+    def __init__(self, status_code, error_message):
+        super().__init__("HTTP request returned with status {}: {}".format(status_code, error_message))

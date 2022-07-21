@@ -1,3 +1,5 @@
 from .embed import Embed
-from . import package, utils
+from .identifiers import SubOption
 from .server import DisunityServer
+from .package import Package
+from . import utils

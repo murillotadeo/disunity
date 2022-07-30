@@ -13,4 +13,5 @@ from .components import (
 from .context import Context
 from .member import Member
 from .user import User
+from .message import Message
 

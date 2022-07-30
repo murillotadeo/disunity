@@ -1,5 +1,6 @@
 from setuptools import setup
 import setuptools
+import aiohttp
 
 readme = ''
 with open('README.md') as f:
@@ -14,7 +15,7 @@ setup(
         "Issue tracker": "https://github.com/murillotadeo/disunity/issues",
         "Source": "https://github.com/murillotadeo/disunity"
     },
-    version="0.1.0",
+    version="0.1.3",
     package_dir={'': 'src'},
     packages=setuptools.find_packages('src'),
     license="MIT",

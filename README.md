@@ -41,7 +41,7 @@ class FirstPackage(package.Package):
     def __init__(self, app):
         self.app = app
 
-    @package.Package.command('ping', utils.SLASH_COMMAND)
+    @package.Package.command('ping')
     async def ping(self, ctx):
         return await ctx.callback("Pong!")
 

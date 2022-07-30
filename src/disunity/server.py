@@ -78,7 +78,7 @@ class DisunityServer(quart.Quart):
             self.__generate_client_credentials()
         return {"Authorization": "Bearer " + self.config['CLIENT_CREDENTIALS_TOKEN']}
 
-    async def make_https_request(self, method: str, url: str, headers: None | dict = None,  payload: None | dict = None):
+    async def make_https_request(self, method: str, url: str, headers: None | dict = None,  payload: None | dict = None, override_checks: bool = False):
         """
             Performs a HTTP request using the given parameters
             Parameters
@@ -106,14 +106,19 @@ class DisunityServer(quart.Quart):
         else:
             _headers = self.auth()
 
-        async with aiohttp.request(method, url, headers=_headers, json=payload) as maybe_response:
-            if not str(maybe_response.status).startswith('20'):
-                raise errors.HTTPRequestError(maybe_response.status, await maybe_response.json())
+        async with aiohttp.ClientSession() as session:
+            async with session.request(method, url, headers=_headers, json=payload) as maybe_response:
+                if override_checks:
+                    return maybe_response
 
-            try:
-                return await maybe_response.json()
-            except Exception as e:
-                self.error_handler(e)
+                if not str(maybe_response.status).startswith('20'):
+                    raise errors.HTTPRequestError(maybe_response.status, await maybe_response.json())
+
+                if maybe_response.status != 204: # No Content response
+                    try:
+                        return await maybe_response.json()
+                    except Exception as e:
+                        self.error_handler(e)
 
     def load_package(self, package_path):
         package = importlib.import_module(package_path)

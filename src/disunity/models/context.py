@@ -1,6 +1,7 @@
 from .. import utils, errors, embed
 from .interaction import Interaction
 from .components import ActionRow, Modal
+from .message import Message
 
 class Context(Interaction):
     def __init__(self, app, received: dict):
@@ -66,7 +67,7 @@ class Context(Interaction):
         embeds: list[embed.Embed] | embed.Embed = [],
         components: list[ActionRow] | ActionRow = [],
         ephemeral: bool = False 
-    ) -> dict:
+    ) -> Message:
         """
             Used to create a follow up response to an already acked interaction.
             Parameters
@@ -91,7 +92,7 @@ class Context(Interaction):
 
         message_body = {
             "content": str(content) if content is not None else '',
-            "embeds": [e.as_dict for e in embeds if isinstance(e, embed.Embed)],
+            "embeds": [e.as_dict() for e in embeds if isinstance(e, embed.Embed)],
             "components": [row.to_dict() for row in components if isinstance(row, ActionRow)]
         }
 
@@ -104,7 +105,7 @@ class Context(Interaction):
             payload=message_body
         )
 
-        return maybe_message
+        return Message(maybe_message, self._app, self.token)
 
 
     async def modal_response(self, modal: Modal):

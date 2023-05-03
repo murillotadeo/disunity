@@ -5,7 +5,7 @@ class Member:
     def __init__(self, received: dict):
         self.raw: dict = received
         self.deaf: bool = received["deaf"]
-        self.is_pending: bool = received["is_pending"]
+        self.pending: bool = received["pending"]
         self.joined_at = received["joined_at"]
         self.mute: bool = received["mute"]
         self.nick: str = received["nick"]

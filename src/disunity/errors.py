@@ -5,20 +5,23 @@ class InvalidMethodUse(Exception):
 
 class CommandNotFound(Exception):
     def __init__(self, command):
-        super().__init__("Command with name {} could not be found".format(command))
+        super().__init__(f"Command with name {command} could not be found")
 
 
 class ComponentNotFound(Exception):
     def __init__(self, component):
+        super().__init__(f"No listener for components with name {component} exists")
+
+
+class AutocompleteNotFound(Exception):
+    def __init__(self, command_name):
         super().__init__(
-            "No listener for components with name {} exist".format(component)
+            f"No listener for autocomplete for command {command_name} exists"
         )
 
 
 class HTTPRequestError(Exception):
     def __init__(self, status_code, error_message):
         super().__init__(
-            "HTTP request returned with status {}: {}".format(
-                status_code, error_message
-            )
+            f"HTTP request returned with status {status_code}: {error_message}"
         )

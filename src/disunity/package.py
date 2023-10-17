@@ -1,7 +1,8 @@
 from __future__ import annotations
-from .identifiers import TopLevelSubCommand, SubOption, Component, Command
 
 import inspect
+
+from .identifiers import Autocomplete, Command, Component, SubOption, TopLevelSubCommand
 
 
 class Package:
@@ -40,6 +41,7 @@ class Package:
             actual.__command__ = True
             actual.__component__ = False
             actual.__subcommand__ = False
+            actual.__autocomplete__ = False
             actual.__data__ = (name, requires_ack, requires_ephemeral)
 
             return actual
@@ -85,6 +87,7 @@ class Package:
             actual.__command__ = False
             actual.__component__ = True
             actual.__subcommand__ = False
+            actual.__autocomplete__ = False
             actual.__data__ = (name, requires_ack, requires_ephemeral, timeout)
 
             return actual
@@ -122,7 +125,52 @@ class Package:
             actual.__command__ = False
             actual.__component__ = False
             actual.__subcommand__ = True
+            actual.__autocomplete__ = False
             actual.__data__ = (name, sub_commands, group)
+
+            return actual
+
+        return decorator
+
+    @classmethod
+    def autocomplete(cls, command_name: str):
+        """
+        Declares a autocomplete function for a command
+
+        Should return a list of option choices
+
+        Parameters
+        ----------
+        command_name : str
+            Name of the command this autocomplete belongs to
+
+        Example
+        -------
+        @Package.autocomplete("command")
+
+        async def command_autocomplete(self, ctx: Context):
+            return [
+                {
+                    "name": "Blue",
+                    "value": "blue"
+                }
+            ]
+        """
+
+        def decorator(coroutine):
+            actual = coroutine
+
+            if isinstance(actual, staticmethod):
+                actual = actual.__func__
+
+            if not inspect.iscoroutinefunction(actual):
+                raise TypeError("Autocomplete methods must be coroutine")
+
+            actual.__command__ = False
+            actual.__component__ = False
+            actual.__subcommand__ = False
+            actual.__autocomplete__ = True
+            actual.__data__ = (command_name,)
 
             return actual
 
@@ -147,6 +195,9 @@ class Package:
 
                 elif meth.__subcommand__:
                     to_return.append(TopLevelSubCommand(d[0], meth, d[1], d[2]))
+
+                elif meth.__autocomplete__:
+                    to_return.append(Autocomplete(d[0], meth))
 
             except AttributeError:
                 continue

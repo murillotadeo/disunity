@@ -21,4 +21,4 @@ class User:
 
     @property
     def mention(self) -> str:
-        return "<@!{}>".format(self.id)
+        return f"<@!{self.id}>"

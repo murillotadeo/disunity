@@ -1,16 +1,16 @@
-from quart.flask_patch.globals import request
-from quart.json import jsonify
-from nacl.signing import VerifyKey
-from nacl.exceptions import BadSignatureError
+import asyncio
+import importlib
+import time
 
 import aiohttp
-import requests
-import time
 import quart
-import importlib
-import asyncio
+import requests
+from nacl.exceptions import BadSignatureError
+from nacl.signing import VerifyKey
+from quart.flask_patch.globals import request
+from quart.json import jsonify
 
-from . import identifiers, cache, errors, utils
+from . import cache, errors, identifiers, utils
 from .models.context import Context
 
 
@@ -58,12 +58,12 @@ class DisunityServer(quart.Quart):
     def error_handler(self, exc: Exception):
         raise exc
 
-    def verify(self, request):
+    def verify(self, req):
         signature, timestamp = (
-            request.headers["X-Signature-Ed25519"],
-            request.headers["X-Signature-Timestamp"],
+            req.headers["X-Signature-Ed25519"],
+            req.headers["X-Signature-Timestamp"],
         )
-        body = request.data.decode("utf-8")
+        body = req.data.decode("utf-8")
 
         try:
             self.__key.verify((timestamp + body).encode(), bytes.fromhex(signature))
@@ -159,10 +159,10 @@ class DisunityServer(quart.Quart):
         self.verify(request)
         received = request.json
 
-        if received["type"] == utils.T_PING:
-            return jsonify({"type": 1})
+        if received["type"] == utils.InteractionTypes.PING:
+            return jsonify({"type": utils.InteractionCallbackTypes.PONG})
 
-        elif received["type"] == utils.T_SLASH_COMMAND:
+        elif received["type"] == utils.InteractionTypes.APPLICATION_COMMAND:
             command = self.__cache.commands[str(received["type"])].get(
                 received["data"]["name"], None
             )
@@ -206,9 +206,14 @@ class DisunityServer(quart.Quart):
                 raise errors.CommandNotFound(ctx.command_name)
 
             if coroutine.ack:
-                response = {"type": 5}
+                response = {
+                    "type": utils.InteractionCallbackTypes.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+                }
                 if coroutine.ephemeral:
-                    response = {"type": 5, "data": {"flags": 64}}
+                    response = {
+                        "type": utils.InteractionCallbackTypes.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                        "data": {"flags": 64},
+                    }
 
                 ctx.acked = True
                 asyncio.create_task(coroutine(ctx))
@@ -217,7 +222,7 @@ class DisunityServer(quart.Quart):
             response = await coroutine(ctx)
             return jsonify(response)
 
-        elif received["type"] == utils.T_COMPONENT:
+        elif received["type"] == utils.InteractionTypes.MESSAGE_COMPONENT:
             context: Context = Context(self, received)
             component: identifiers.Component = self.__cache.components.get(
                 str(context.custom_id).split("-")[0], None
@@ -227,9 +232,14 @@ class DisunityServer(quart.Quart):
                 raise errors.ComponentNotFound(context.custom_id.split("-")[0])
 
             if component.ack:
-                response = {"type": 6}
+                response = {
+                    "type": utils.InteractionCallbackTypes.DEFERRED_UPDATE_MESSAGE
+                }
                 if component.ephemeral:
-                    response = {"type": 6, "data": {"flags": 64}}
+                    response = {
+                        "type": utils.InteractionCallbackTypes.DEFERRED_UPDATE_MESSAGE,
+                        "data": {"flags": 64},
+                    }
 
                 context.acked = True
                 asyncio.create_task(component(context))
@@ -238,7 +248,26 @@ class DisunityServer(quart.Quart):
             maybe_response = await component(context)
             return jsonify(maybe_response)
 
-        elif received["type"] == utils.T_MODAL_SUBMIT:
+        elif (
+            received["type"] == utils.InteractionTypes.APPLICATION_COMMAND_AUTOCOMPLETE
+        ):
+            context: Context = Context(self, received)
+
+            autocomplete: identifiers.Autocomplete = self.__cache.autocompletes.get(
+                str(context.command_name), None
+            )
+
+            if autocomplete is None:
+                raise errors.AutocompleteNotFound(context.command_name)
+
+            maybe_choices = await autocomplete(context)
+            response = {
+                "type": utils.InteractionCallbackTypes.APPLICATION_COMMAND_AUTOCOMPLETE_RESULT,
+                "data": {"choices": maybe_choices or []},
+            }
+            return jsonify(response)
+
+        elif received["type"] == utils.InteractionTypes.MODAL_SUBMIT:
             context: Context = Context(self, received)
             component: identifiers.Component = self.__cache.components.get(
                 str(context.custom_id).split("-")[0], None

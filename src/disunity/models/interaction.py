@@ -1,6 +1,7 @@
+from .. import utils
 from ..errors import InvalidMethodUse
-from .user import User
 from .member import Member
+from .user import User
 
 
 class Interaction:
@@ -29,7 +30,9 @@ class Interaction:
         else:
             self.invoked_by: User = User(received["user"])
 
-        if self.interaction_type == 3:  # Component
+        if (
+            self.interaction_type == utils.InteractionTypes.MESSAGE_COMPONENT
+        ):  # Component
             if "interaction" in received["message"]:
                 self.invoked_by: User = User(received["message"]["interaction"]["user"])
             else:
@@ -39,7 +42,9 @@ class Interaction:
             else:
                 self.used_by: None | User = User(received["user"])
 
-        elif self.interaction_type == 5:  # modal submit
+        elif (
+            self.interaction_type == utils.InteractionTypes.MODAL_SUBMIT
+        ):  # modal submit
             self.modal_values: None | list[dict] = self.data["components"][0][
                 "components"
             ]
@@ -50,7 +55,7 @@ class Interaction:
         the interaction author are the same.
         """
 
-        if self.interaction_type != 3:
+        if self.interaction_type != utils.InteractionTypes.MESSAGE_COMPONENT:
             raise InvalidMethodUse("Interaction is not a component interaction")
 
         if self.invoked_by.id == self.used_by.id:

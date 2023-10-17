@@ -1,5 +1,5 @@
-from typing import Callable
 from datetime import datetime, timezone
+from typing import Callable
 
 
 class SubOption:
@@ -159,5 +159,20 @@ class Command:
             response = await self.coroutine(context)
             if isinstance(response, dict):
                 return response
+        except Exception as e:
+            context._app.error_handler(e)
+
+
+class Autocomplete:
+    def __init__(self, command_name: str, coroutine: Callable):
+        self.command_name: str = command_name
+        self.coroutine: Callable = coroutine
+
+    async def __call__(self, context):
+        try:
+            response = await self.coroutine(context)
+            if isinstance(response, list):
+                return response
+            return []
         except Exception as e:
             context._app.error_handler(e)

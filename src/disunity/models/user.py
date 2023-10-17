@@ -1,13 +1,15 @@
 from .. import utils
 
+
 class User:
     def __init__(self, received):
         self.raw: dict = received
         self.id: int = int(received["id"])
         self.name: str = received["username"]
+        self.global_name: str = received["global_name"]
         self.discriminator: int = int(received["discriminator"])
-        self.avatar_decoration: str = received["avatar_decoration"]
-        self.public_flags: int = int(received["public_flags"])
+        self.avatar_decoration: str = received.get("avatar_decoration", "")
+        self.public_flags: int = int(received.get("public_flags", 0))
 
     @property
     def avatar_url(self) -> str:
@@ -19,4 +21,4 @@ class User:
 
     @property
     def mention(self) -> str:
-        return "<@!{}>".format(self.id)
+        return f"<@!{self.id}>"

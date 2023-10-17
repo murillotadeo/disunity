@@ -36,7 +36,7 @@ class Embed:
             value = str(value)
         self._description = value
         self.__json["description"] = value
-        
+
     @property
     def color(self) -> None | int:
         return self._color
@@ -47,7 +47,7 @@ class Embed:
             value = value
         self._color = value
         self.__json["color"] = value
-        
+
     @property
     def title(self) -> None | str:
         return self._title

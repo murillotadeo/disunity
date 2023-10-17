@@ -1,5 +1,5 @@
-from .user import User
 from .. import utils
+from .user import User
 
 
 class Member:

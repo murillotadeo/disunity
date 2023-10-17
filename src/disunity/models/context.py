@@ -1,6 +1,6 @@
-from .. import utils, errors, embed
-from .interaction import Interaction
+from .. import embed, errors, utils
 from .components import ActionRow, Modal
+from .interaction import Interaction
 from .message import Message
 
 
@@ -21,7 +21,7 @@ class Context(Interaction):
         embeds: list[embed.Embed] | embed.Embed = [],
         components: list[ActionRow] | ActionRow = [],
         ephemeral: bool = False,
-        response_type: int = utils.CHANNEL_WITH_SOURCE,
+        response_type: int = utils.InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,
     ) -> dict:
         """
         Creates the first interation response.
@@ -124,4 +124,4 @@ class Context(Interaction):
             The modal to respond with.
         """
 
-        return {"type": 9, "data": modal.to_dict()}
+        return {"type": utils.InteractionCallbackTypes.MODAL, "data": modal.to_dict()}

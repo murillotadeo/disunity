@@ -1,7 +1,8 @@
 from __future__ import annotations
-from .user import User
+
 from ..embed import Embed
 from .components import ActionRow
+from .user import User
 
 
 class MissingTokenError(Exception):

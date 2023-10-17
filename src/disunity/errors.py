@@ -11,7 +11,14 @@ class CommandNotFound(Exception):
 class ComponentNotFound(Exception):
     def __init__(self, component):
         super().__init__(
-            "No listener for components with name {} exist".format(component)
+            "No listener for components with name {} exists".format(component)
+        )
+
+
+class AutocompleteNotFound(Exception):
+    def __init__(self, command_name):
+        super().__init__(
+            f"No listener for autocomplete for command {command_name} exists"
         )
 
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
-from .identifiers import TopLevelSubCommand, SubOption, Component, Command, Autocomplete
 
 import inspect
+
+from .identifiers import Autocomplete, Command, Component, SubOption, TopLevelSubCommand
 
 
 class Package:
@@ -130,22 +131,30 @@ class Package:
             return actual
 
         return decorator
-    
+
     @classmethod
-    def autocomplete(
-        cls,
-        command_name: str,
-        option_name: str,
-    ):
-        """ "
-        Declares a autocomplete function for a command optin
+    def autocomplete(cls, command_name: str):
+        """
+        Declares a autocomplete function for a command
+
+        Should return a list of option choices
 
         Parameters
         ----------
         command_name : str
-            ...
-        option_name : str
-            ...
+            Name of the command this autocomplete belongs to
+
+        Example
+        -------
+        @Package.autocomplete("command")
+
+        async def command_autocomplete(self, ctx: Context):
+            return [
+                {
+                    "name": "Blue",
+                    "value": "blue"
+                }
+            ]
         """
 
         def decorator(coroutine):
@@ -161,7 +170,7 @@ class Package:
             actual.__component__ = False
             actual.__subcommand__ = False
             actual.__autocomplete__ = True
-            actual.__data__ = (command_name, option_name)
+            actual.__data__ = (command_name,)
 
             return actual
 
@@ -186,9 +195,9 @@ class Package:
 
                 elif meth.__subcommand__:
                     to_return.append(TopLevelSubCommand(d[0], meth, d[1], d[2]))
-                    
+
                 elif meth.__autocomplete__:
-                    to_return.append(Autocomplete(d[0], d[1], meth))
+                    to_return.append(Autocomplete(d[0], meth))
 
             except AttributeError:
                 continue

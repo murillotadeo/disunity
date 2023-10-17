@@ -1,20 +1,25 @@
-from enum import Enum
-
-CHANNEL_WITH_SOURCE = 4
-DEFERRED_CHANNEL_WITH_SOURCE = 5
-DEFERRED_UPDATE_MESSAGE = 6
-UPDATE_MESSAGE = 7
-MODAL = 9
+from enum import Enum, IntEnum
 
 __version__ = "0.1.3"
 
 
-class InteractionTypes(Enum):
+class InteractionTypes(IntEnum):
     PING = 1
     APPLICATION_COMMAND = 2
     MESSAGE_COMPONENT = 3
     APPLICATION_COMMAND_AUTOCOMPLETE = 4
     MODAL_SUBMIT = 5
+
+
+class InteractionCallbackTypes(IntEnum):
+    PONG = 1
+    CHANNEL_MESSAGE_WITH_SOURCE = 4
+    DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5
+    DEFERRED_UPDATE_MESSAGE = 6
+    UPDATE_MESSAGE = 7
+    APPLICATION_COMMAND_AUTOCOMPLETE_RESULT = 8
+    MODAL = 9
+    PREMIUM_REQUIRED = 10
 
 
 class DefaultAvatars(Enum):

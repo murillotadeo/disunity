@@ -159,10 +159,10 @@ class DisunityServer(quart.Quart):
         self.verify(request)
         received = request.json
 
-        if received["type"] == utils.T_PING:
+        if received["type"] == utils.InteractionTypes.PING:
             return jsonify({"type": 1})
 
-        elif received["type"] == utils.T_SLASH_COMMAND:
+        elif received["type"] == utils.InteractionTypes.APPLICATION_COMMAND:
             command = self.__cache.commands[str(received["type"])].get(
                 received["data"]["name"], None
             )
@@ -217,7 +217,7 @@ class DisunityServer(quart.Quart):
             response = await coroutine(ctx)
             return jsonify(response)
 
-        elif received["type"] == utils.T_COMPONENT:
+        elif received["type"] == utils.InteractionTypes.MESSAGE_COMPONENT:
             context: Context = Context(self, received)
             component: identifiers.Component = self.__cache.components.get(
                 str(context.custom_id).split("-")[0], None
@@ -237,8 +237,18 @@ class DisunityServer(quart.Quart):
 
             maybe_response = await component(context)
             return jsonify(maybe_response)
+        
+        elif received["type"] == utils.InteractionTypes.APPLICATION_COMMAND_AUTOCOMPLETE:
+            print(received)
+            
+            # context: Context = Context(self, received)
+            
+            # component: identifiers.Component = self.__cache.autocompletes.get(
+            #     str(context.custom_id).split("-")[0], None
+            # )
+            
 
-        elif received["type"] == utils.T_MODAL_SUBMIT:
+        elif received["type"] == utils.InteractionTypes.MODAL_SUBMIT:
             context: Context = Context(self, received)
             component: identifiers.Component = self.__cache.components.get(
                 str(context.custom_id).split("-")[0], None

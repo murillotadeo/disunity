@@ -1,12 +1,19 @@
-from .identifiers import TopLevelSubCommand, CacheableSubCommand, Command, Component
+from .identifiers import (
+    TopLevelSubCommand,
+    CacheableSubCommand,
+    Command,
+    Component,
+    Autocomplete,
+)
 
 
 class ApplicationCache:
     def __init__(self):
         self.commands = dict()
         self.components = dict()
+        self.autocompletes = dict()
 
-    def add_item(self, incoming: TopLevelSubCommand | Command | Component):
+    def add_item(self, incoming: TopLevelSubCommand | Command | Component | Autocomplete):
         if isinstance(incoming, TopLevelSubCommand):
             if "2" not in self.commands:
                 self.commands["2"] = {}  # Sub commands will always by type 2
@@ -24,6 +31,12 @@ class ApplicationCache:
 
         elif isinstance(incoming, Component):
             self.components[str(incoming.name)] = incoming
+
+        elif isinstance(incoming, Autocomplete):
+            if str(incoming.command_name) not in self.autocompletes:
+                self.autocompletes[str(incoming.command_name)] = {}
+                
+            self.autocompletes[str(incoming.command_name)][str(incoming.option_name)] = incoming
 
         else:
             raise TypeError

@@ -6,12 +6,15 @@ DEFERRED_UPDATE_MESSAGE = 6
 UPDATE_MESSAGE = 7
 MODAL = 9
 
-T_PING = 1
-T_SLASH_COMMAND = 2
-T_COMPONENT = 3
-T_MODAL_SUBMIT = 5
-
 __version__ = "0.1.3"
+
+
+class InteractionTypes(Enum):
+    PING = 1
+    APPLICATION_COMMAND = 2
+    MESSAGE_COMPONENT = 3
+    APPLICATION_COMMAND_AUTOCOMPLETE = 4
+    MODAL_SUBMIT = 5
 
 
 class DefaultAvatars(Enum):

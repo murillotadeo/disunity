@@ -1,12 +1,8 @@
 from __future__ import annotations
-from .identifiers import (
-    TopLevelSubCommand,
-    SubOption,
-    Component,
-    Command 
-)
+from .identifiers import TopLevelSubCommand, SubOption, Component, Command
 
 import inspect
+
 
 class Package:
     def __init__(self):
@@ -14,21 +10,24 @@ class Package:
         self.components = []
 
     @classmethod
-    def command(cls, name: str, requires_ack: bool = False, requires_ephemeral: bool = False):
+    def command(
+        cls, name: str, requires_ack: bool = False, requires_ephemeral: bool = False
+    ):
         """
-            Declare a command within the application.
+        Declare a command within the application.
 
-            Parameters
-            ----------
-            name : str
-                The command name
-            requires_ack : bool
-                Does the command need to be acked before the first response.
-                Defaulted to False.
-            requires_ephemeral : bool
-                Only applicable if requires_ack is True. Acks the command 
-                using an ephemeral response. Default to False.
+        Parameters
+        ----------
+        name : str
+            The command name
+        requires_ack : bool
+            Does the command need to be acked before the first response.
+            Defaulted to False.
+        requires_ephemeral : bool
+            Only applicable if requires_ack is True. Acks the command
+            using an ephemeral response. Default to False.
         """
+
         def decorator(coroutine):
             actual = coroutine
 
@@ -44,31 +43,39 @@ class Package:
             actual.__data__ = (name, requires_ack, requires_ephemeral)
 
             return actual
+
         return decorator
 
     @classmethod
-    def component(cls, name: str, requires_ack: bool = False, requires_ephemeral: bool = False, timeout: float = 0.0):
-        """"
-            Declares a component object within the application
+    def component(
+        cls,
+        name: str,
+        requires_ack: bool = False,
+        requires_ephemeral: bool = False,
+        timeout: float = 0.0,
+    ):
+        """ "
+        Declares a component object within the application
 
-            Parameters
-            ----------
-            name : str
-                The name of the component. Will be gathered in the format
-                component_name-<unique tag for this component, preferably
-                the interaction id>.
-            requires_ack : bool
-                Does the interaction need to be acked before the first response
-                Default to False.
-            requires_ephemeral : bool
-                Only applicable if requires_ack is True. Acks the interaction 
-                using an ephemeral response.
-            timeout : float
-                The component timeout. Default to 0.0.
+        Parameters
+        ----------
+        name : str
+            The name of the component. Will be gathered in the format
+            component_name-<unique tag for this component, preferably
+            the interaction id>.
+        requires_ack : bool
+            Does the interaction need to be acked before the first response
+            Default to False.
+        requires_ephemeral : bool
+            Only applicable if requires_ack is True. Acks the interaction
+            using an ephemeral response.
+        timeout : float
+            The component timeout. Default to 0.0.
         """
+
         def decorator(coroutine):
             actual = coroutine
-            
+
             if isinstance(actual, staticmethod):
                 actual = actual.__func__
 
@@ -81,22 +88,29 @@ class Package:
             actual.__data__ = (name, requires_ack, requires_ephemeral, timeout)
 
             return actual
+
         return decorator
 
     @classmethod
-    def sub(cls, name: str, sub_commands: list[str | SubOption] | str | SubOption, group: None | str = None):
+    def sub(
+        cls,
+        name: str,
+        sub_commands: list[str | SubOption] | str | SubOption,
+        group: None | str = None,
+    ):
         """
-            Declares a sub command within the application
+        Declares a sub command within the application
 
-            Parameters
-            ----------
-            name : str
-                The name of the command base.
-            sub_commands : list[str | SubOption] | str | SubOption
-                The sub command options that this command has.
-            group : str | None
-                The group that the sub commands belong to. Defaults to None.
+        Parameters
+        ----------
+        name : str
+            The name of the command base.
+        sub_commands : list[str | SubOption] | str | SubOption
+            The sub command options that this command has.
+        group : str | None
+            The group that the sub commands belong to. Defaults to None.
         """
+
         def decorator(coroutine):
             actual = coroutine
             if isinstance(actual, staticmethod):
@@ -111,13 +125,17 @@ class Package:
             actual.__data__ = (name, sub_commands, group)
 
             return actual
+
         return decorator
 
-    
     def unpack(self):
         to_return = []
 
-        for meth in [attr[1] for attr in inspect.getmembers(self, inspect.iscoroutinefunction) if not attr[0].startswith('__') and not attr[0].endswith('__')]:
+        for meth in [
+            attr[1]
+            for attr in inspect.getmembers(self, inspect.iscoroutinefunction)
+            if not attr[0].startswith("__") and not attr[0].endswith("__")
+        ]:
             try:
                 d = meth.__data__
 

@@ -11,7 +11,8 @@ T_SLASH_COMMAND = 2
 T_COMPONENT = 3
 T_MODAL_SUBMIT = 5
 
-__version__ = '0.1.3'
+__version__ = "0.1.3"
+
 
 class DefaultAvatars(Enum):
     blurple = 0
@@ -24,10 +25,10 @@ class DefaultAvatars(Enum):
     def __str__(self):
         return self.name
 
+
 def return_avatar_as_cdn(avatar, uid):
     if avatar is not None:
-        animated = avatar.startswith('a_')
-        suffix = 'gif' if animated else 'png'
+        animated = avatar.startswith("a_")
+        suffix = "gif" if animated else "png"
         return f"https://cdn.discordapp.com/avatars/{uid}/{avatar}.{suffix}?size=1024"
     return f"https://cdn.discordapp.com/embed/avatars/{uid%len(DefaultAvatars)}.png"
-

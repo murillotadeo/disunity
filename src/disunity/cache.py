@@ -1,9 +1,5 @@
-from .identifiers import (
-    TopLevelSubCommand,
-    CacheableSubCommand,
-    Command,
-    Component
-)
+from .identifiers import TopLevelSubCommand, CacheableSubCommand, Command, Component
+
 
 class ApplicationCache:
     def __init__(self):
@@ -12,9 +8,9 @@ class ApplicationCache:
 
     def add_item(self, incoming: TopLevelSubCommand | Command | Component):
         if isinstance(incoming, TopLevelSubCommand):
-            if '2' not in self.commands:
-                self.commands["2"] = {} # Sub commands will always by type 2
-                
+            if "2" not in self.commands:
+                self.commands["2"] = {}  # Sub commands will always by type 2
+
             if incoming.name in self.commands["2"]:
                 self.commands["2"][str(incoming.name)].add(incoming)
             else:

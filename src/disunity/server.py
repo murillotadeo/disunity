@@ -1,6 +1,5 @@
 import asyncio
 import importlib
-import logging
 import time
 
 import aiohttp
@@ -59,12 +58,12 @@ class DisunityServer(quart.Quart):
     def error_handler(self, exc: Exception):
         raise exc
 
-    def verify(self, request):
+    def verify(self, req):
         signature, timestamp = (
-            request.headers["X-Signature-Ed25519"],
-            request.headers["X-Signature-Timestamp"],
+            req.headers["X-Signature-Ed25519"],
+            req.headers["X-Signature-Timestamp"],
         )
-        body = request.data.decode("utf-8")
+        body = req.data.decode("utf-8")
 
         try:
             self.__key.verify((timestamp + body).encode(), bytes.fromhex(signature))

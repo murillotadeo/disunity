@@ -173,7 +173,6 @@ class Autocomplete:
             response = await self.coroutine(context)
             if isinstance(response, list):
                 return response
-            else:
-                return []
+            return []
         except Exception as e:
             context._app.error_handler(e)

@@ -43,8 +43,6 @@ class Embed:
 
     @color.setter
     def color(self, value: None | int) -> None:
-        if value is not None:
-            value = value
         self._color = value
         self.__json["color"] = value
 
@@ -52,7 +50,7 @@ class Embed:
     def title(self) -> None | str:
         return self._title
 
-    @color.setter
+    @title.setter
     def title(self, value: None | str) -> None:
         if value is not None:
             value = str(value)

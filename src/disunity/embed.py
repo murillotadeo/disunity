@@ -15,17 +15,49 @@ class Embed:
     ):
         self.__json: dict = {"type": "rich", "color": color}
 
-        self.title: None | str = title
-        self.description: None | str = description
-        self.color: None | int = color
+        self._title: None | str = title
+        self._description: None | str = description
+        self._color: None | int = color
 
-        if self.title is not None:
-            self.title = str(self.title)
+        if self._title is not None:
+            self._title = str(self.title)
             self.__json["title"] = self.title
 
-        if self.description is not None:
-            self.description = str(self.description)
-            self.__json["description"] = self.description
+        if self._description is not None:
+            self.__json["description"] = str(self._description)
+
+    @property
+    def description(self) -> None | str:
+        return self._description
+
+    @description.setter
+    def description(self, value: None | str) -> None:
+        if value is not None:
+            value = str(value)
+        self._description = value
+        self.__json["description"] = value
+        
+    @property
+    def color(self) -> None | int:
+        return self._color
+
+    @color.setter
+    def color(self, value: None | int) -> None:
+        if value is not None:
+            value = value
+        self._color = value
+        self.__json["color"] = value
+        
+    @property
+    def title(self) -> None | str:
+        return self._title
+
+    @color.setter
+    def title(self, value: None | str) -> None:
+        if value is not None:
+            value = str(value)
+        self._title = value
+        self.__json["title"] = value
 
     @property
     def fields(self) -> None | list[dict]:

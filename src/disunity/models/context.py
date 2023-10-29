@@ -104,7 +104,7 @@ class Context(Interaction):
         }
 
         if ephemeral:
-            message_body["data"] = {"flags": 64}
+            message_body["flags"] = 64
 
         maybe_message = await self._app.make_https_request(
             "POST",

@@ -58,7 +58,7 @@ class Button:
         custom_id: str | None,
         label: str,
         style: int = ButtonStyles.PRIMARY,
-        emoji: dict = {},
+        emoji: dict | None = None,
         url: str | None = None,
         disabled: bool = False,
     ):
@@ -67,9 +67,12 @@ class Button:
             "custom_id": custom_id,
             "label": label,
             "style": style,
-            "emoji": emoji,
             "disabled": disabled,
         }
+        
+        # Very wonky patch for whatever the hell Discord just did
+        if emoji and isinstance(emoji, dict):
+            self.dict["emoji"] = emoji
 
         if self.dict["style"] == ButtonStyles.LINK and url is not None:
             self.dict["url"] = url

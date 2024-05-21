@@ -2,6 +2,7 @@ from .. import embed, errors, utils
 from .components import ActionRow, Modal
 from .interaction import Interaction
 from .message import Message
+from .attachment import Attachment
 
 
 class Context(Interaction):
@@ -20,6 +21,7 @@ class Context(Interaction):
         content: None | str = None,
         embeds: list[embed.Embed] | embed.Embed = [],
         components: list[ActionRow] | ActionRow = [],
+        attachments: list[Attachment] | Attachment = [],
         ephemeral: bool = False,
         response_type: int = utils.InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,
     ) -> dict:
@@ -69,6 +71,7 @@ class Context(Interaction):
         content: None | str = None,
         embeds: list[embed.Embed] | embed.Embed = [],
         components: list[ActionRow] | ActionRow = [],
+        attachments: list[Attachment] | Attachment = [],
         ephemeral: bool = False,
     ) -> Message:
         """
@@ -81,6 +84,8 @@ class Context(Interaction):
             List of embeds to send, will all be shown at once
         components: List[ActionRow] | ActionRow:
             List of components to send with the message
+        attachments: List[Attachment] | Attachment
+            List of attachments to send with the message
         ephemeral: bool
             Will the message show publically or privately
         """
@@ -94,6 +99,8 @@ class Context(Interaction):
             embeds = [embeds]
         if isinstance(components, ActionRow):
             components = [components]
+        if isinstance(attachments, Attachment):
+            attachments = [attachments]
 
         message_body = {
             "content": str(content) if content is not None else "",
@@ -101,15 +108,29 @@ class Context(Interaction):
             "components": [
                 row.to_dict() for row in components if isinstance(row, ActionRow)
             ],
+            "attachments": [
+                {"id": i, "filename": att.filename, "description": att.description}
+                for i, att in enumerate(attachments)
+                if isinstance(att, Attachment)
+            ],
         }
 
         if ephemeral:
             message_body["flags"] = 64
 
+        files = None
+        if attachments:
+            files = [
+                {"id": i, "filename": att.filename, "content": att.content}
+                for i, att in enumerate(attachments)
+                if isinstance(att, Attachment)
+            ]
+
         maybe_message = await self._app.make_https_request(
             "POST",
             f"webhooks/{self._app.config['CLIENT_ID']}/{self.token}",
             payload=message_body,
+            files=files,
         )
 
         return Message(maybe_message, self._app, self.token)

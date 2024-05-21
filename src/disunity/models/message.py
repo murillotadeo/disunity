@@ -29,6 +29,7 @@ class Message:
         self.channel_id: int = raw_message["channel_id"]
         self.components: list[dict] | list = raw_message["components"]
         self.embeds: list | list[dict] = raw_message["embeds"]
+        self.attachments: list | list[dict] = raw_message.get("attachements")
         self.content: str = raw_message["content"]
         self.interaction_token: str | None = token
 

@@ -19,12 +19,8 @@ class Embed:
         self._description: None | str = description
         self._color: None | int = color
 
-        if self._title is not None:
-            self._title = str(self.title)
-            self.__json["title"] = self.title
-
-        if self._description is not None:
-            self.__json["description"] = str(self._description)
+        self.title = title
+        self.description = description
 
     @property
     def description(self) -> None | str:

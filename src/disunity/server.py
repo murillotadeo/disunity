@@ -140,7 +140,7 @@ class DisunityServer(quart.Quart):
                 if content_type is None:
                     content_type = "application/octet-stream"
                 data.add_field(
-                    f"files[{file["id"]}]",
+                    f"files[{file['id']}]",
                     file["content"],
                     filename=file["filename"],
                     content_type=content_type,

@@ -1,5 +1,5 @@
 class Attachment:
-    def __init__(self, filename: str, content: bytes, description: str):
+    def __init__(self, filename: str, content: bytes, description: str = None):
         self._filename = filename
         self._content = content
         self._description = description

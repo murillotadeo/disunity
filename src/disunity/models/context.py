@@ -21,7 +21,6 @@ class Context(Interaction):
         content: None | str = None,
         embeds: list[embed.Embed] | embed.Embed = [],
         components: list[ActionRow] | ActionRow = [],
-        attachments: list[Attachment] | Attachment = [],
         ephemeral: bool = False,
         response_type: int = utils.InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,
     ) -> dict:

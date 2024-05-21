@@ -58,7 +58,7 @@ class Button:
         custom_id: str | None,
         label: str,
         style: int = ButtonStyles.PRIMARY,
-        emoji: dict = {},
+        emoji: dict | None = None,
         url: str | None = None,
         disabled: bool = False,
     ):
@@ -67,9 +67,12 @@ class Button:
             "custom_id": custom_id,
             "label": label,
             "style": style,
-            "emoji": emoji,
-            "disabled": disabled,
+            "disabled": disabled
         }
+        
+        # Very wonky patch for whatever the hell Discord just did
+        if emoji and isinstance(emoji, dict):
+            self.dict["emoji"] = emoji
 
         if self.dict["style"] == ButtonStyles.LINK and url is not None:
             self.dict["url"] = url
@@ -95,14 +98,16 @@ class SelectMenuOption:
     """
 
     def __init__(
-        self, label: str, value: str | int, description: str = "", emoji: dict = {}
+        self, label: str, value: str | int, description: str = "", emoji: dict | None = None
     ):
         self.dict = {
             "label": label,
             "value": value,
-            "description": description,
-            "emoji": emoji,
+            "description": description
         }
+
+        if emoji and isinstance(emoji, dict):
+            self.dict["emoji"] = emoji
 
     def to_dict(self) -> dict:
         return self.dict

@@ -1,5 +1,7 @@
 import asyncio
 import importlib
+import json
+import mimetypes
 import time
 
 import aiohttp
@@ -97,6 +99,7 @@ class DisunityServer(quart.Quart):
         url: str,
         headers: None | dict = None,
         payload: None | dict = None,
+        files: None | dict = None,
         override_checks: bool = False,
     ):
         """
@@ -105,7 +108,6 @@ class DisunityServer(quart.Quart):
         ----------
         method: str
             The method to use. Can be either: GET, PUT, PATCH, DELETE, POST
-
         url: str
             The url to make the request to. If performing a request to discord, do not include
             'https://discord.com/api/v10', it will be automatically added.
@@ -114,21 +116,42 @@ class DisunityServer(quart.Quart):
             client credentials will be used.
         payload: Optional[dict]
             The payload to send to the url. Only applicable for POST, PUT, and PATCH requests.
+        files: Optional[list]
+            A list of dictionaries with 'id', 'filename' and 'content'.
         """
-
         if not url.startswith("https://"):
             url = "https://discord.com/api/v10/" + url
 
-        if headers is not None:
-            _headers = headers
-        elif headers is None and self.config["BOT_TOKEN"] is not None:
-            _headers = {"Authorization": "Bot " + self.config["BOT_TOKEN"]}
+        if headers is None and self.config["BOT_TOKEN"] is not None:
+            headers = {"Authorization": "Bot " + self.config["BOT_TOKEN"]}
+        elif headers is None:
+            headers = self.auth()
+
+        if files:
+            data = aiohttp.FormData()
+            if payload:
+                data.add_field(
+                    "payload_json",
+                    json.dumps(payload),
+                    content_type="application/json",
+                )
+            for file in files:
+                content_type, _ = mimetypes.guess_type(file["filename"])
+                if content_type is None:
+                    content_type = "application/octet-stream"
+                data.add_field(
+                    f"files[{file['id']}]",
+                    file["content"],
+                    filename=file["filename"],
+                    content_type=content_type,
+                )
+            request_kwargs = {"data": data}
         else:
-            _headers = self.auth()
+            request_kwargs = {"json": payload} if payload else {}
 
         async with aiohttp.ClientSession() as session:
             async with session.request(
-                method, url, headers=_headers, json=payload
+                method, url, headers=headers, **request_kwargs
             ) as maybe_response:
                 if override_checks:
                     return maybe_response

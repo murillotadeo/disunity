@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "disunity"
-version = "0.1.7"
+version = "0.1.8"
 authors = [
     {name="Tadeo Murillo"},
     {name=""}

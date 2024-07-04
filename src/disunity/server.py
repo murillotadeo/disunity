@@ -178,6 +178,27 @@ class DisunityServer(quart.Quart):
         for item in contents:
             self.__cache.add_item(item)
 
+    async def global_check(self, context: Context) -> bool:
+        """Global check for all application commands, message components and modal submits.
+
+        Args:
+            context (Context): Application command context.
+
+        Returns:
+            bool: Command is executed only if `True` is returned.
+                    `True` is returned by default.
+        """
+        return True
+    
+    async def global_before_interaction(self, context: Context):
+        """Called before the execution of any application command, message components and modal submits.
+        This is called after global check is handled.
+
+        Args:
+            context (Context): Application command or message component context.
+        """
+        pass
+
     async def interactions(self):
         self.verify(request)
         received = request.json
@@ -227,6 +248,15 @@ class DisunityServer(quart.Quart):
             ctx: Context = Context(self, received)
             if coroutine is None:
                 raise errors.CommandNotFound(ctx.command_name)
+            
+            check = await self.global_check(ctx)
+            if check != True:
+                if isinstance(check, dict) and "type" in check:
+                    return jsonify(check)
+                else:
+                    return jsonify({"type": utils.InteractionCallbackTypes.PONG})
+            
+            await self.global_before_interaction(ctx)
 
             if coroutine.ack:
                 response = {
@@ -253,6 +283,15 @@ class DisunityServer(quart.Quart):
 
             if component is None:
                 raise errors.ComponentNotFound(context.custom_id.split("-")[0])
+
+            check = await self.global_check(context)
+            if check != True:
+                if isinstance(check, dict) and "type" in check:
+                    return jsonify(check)
+                else:
+                    return jsonify({"type": utils.InteractionCallbackTypes.PONG})
+            
+            await self.global_before_interaction(context)
 
             if component.ack:
                 response = {
@@ -298,6 +337,15 @@ class DisunityServer(quart.Quart):
 
             if component is None:
                 raise errors.ComponentNotFound(context.custom_id.split("-")[0])
+
+            check = await self.global_check(context)
+            if check != True:
+                if isinstance(check, dict) and "type" in check:
+                    return jsonify(check)
+                else:
+                    return jsonify({"type": utils.InteractionCallbackTypes.PONG})
+            
+            await self.global_before_interaction(context)
 
             maybe_response = await component(context)
             return jsonify(maybe_response)

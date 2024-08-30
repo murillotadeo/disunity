@@ -285,13 +285,13 @@ class DisunityServer(quart.Quart):
                 ctx.acked = True
                 async def combined_task(ctx):
                     await coroutine(ctx)
-                    await self.after_interaction(ctx)
+                    await self.global_after_interaction(ctx)
 
                 asyncio.create_task(combined_task(ctx))
                 return jsonify(response)
 
             response = await coroutine(ctx)
-            asyncio.create_task(self.after_interaction(ctx))
+            asyncio.create_task(self.global_after_interaction(ctx))
             return jsonify(response)
 
         elif received["type"] == utils.InteractionTypes.MESSAGE_COMPONENT:
@@ -323,15 +323,15 @@ class DisunityServer(quart.Quart):
                     }
 
                 context.acked = True
-                async def combined_task(ctx):
+                async def combined_task(context):
                     await component(context)
-                    await self.after_interaction(ctx)
+                    await self.global_after_interaction(context)
 
-                asyncio.create_task(combined_task(ctx))
+                asyncio.create_task(combined_task(context))
                 return jsonify(response)
 
             maybe_response = await component(context)
-            asyncio.create_task(self.after_interaction(ctx))
+            asyncio.create_task(self.global_after_interaction(context))
             return jsonify(maybe_response)
 
         elif (
@@ -372,5 +372,5 @@ class DisunityServer(quart.Quart):
             await self.global_before_interaction(context)
 
             maybe_response = await component(context)
-            asyncio.create_task(self.after_interaction(ctx))
+            asyncio.create_task(self.global_after_interaction(context))
             return jsonify(maybe_response)

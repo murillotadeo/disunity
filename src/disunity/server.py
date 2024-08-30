@@ -204,6 +204,15 @@ class DisunityServer(quart.Quart):
         """
         pass
 
+    async def global_after_interaction(self, context: Context):
+        """Called after the execution of any application command, message components, and modal submits.
+
+        Args:
+            context (Context): Application command or message component context.
+        """
+        pass
+
+
     async def interactions(self):
         self.verify(request)
         received = request.json
@@ -274,10 +283,15 @@ class DisunityServer(quart.Quart):
                     }
 
                 ctx.acked = True
-                asyncio.create_task(coroutine(ctx))
+                async def combined_task(ctx):
+                    await coroutine(ctx)
+                    await self.after_interaction(ctx)
+
+                asyncio.create_task(combined_task(ctx))
                 return jsonify(response)
 
             response = await coroutine(ctx)
+            asyncio.create_task(self.after_interaction(ctx))
             return jsonify(response)
 
         elif received["type"] == utils.InteractionTypes.MESSAGE_COMPONENT:
@@ -309,10 +323,15 @@ class DisunityServer(quart.Quart):
                     }
 
                 context.acked = True
-                asyncio.create_task(component(context))
+                async def combined_task(ctx):
+                    await component(context)
+                    await self.after_interaction(ctx)
+
+                asyncio.create_task(combined_task(ctx))
                 return jsonify(response)
 
             maybe_response = await component(context)
+            asyncio.create_task(self.after_interaction(ctx))
             return jsonify(maybe_response)
 
         elif (
@@ -353,4 +372,5 @@ class DisunityServer(quart.Quart):
             await self.global_before_interaction(context)
 
             maybe_response = await component(context)
+            asyncio.create_task(self.after_interaction(ctx))
             return jsonify(maybe_response)

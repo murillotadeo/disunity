@@ -48,6 +48,7 @@ class DisunityServer(quart.Quart):
         self.config["BOT_TOKEN"] = bot_token
         self.config["CREDENTIALS_EXPIRE_IN"] = 0  # set on start up
         self.__cache: cache.ApplicationCache = cache.ApplicationCache()
+        self.__packages = dict()
         self.__key = VerifyKey(bytes.fromhex(self.config["CLIENT_PUBLIC_KEY"]))
         self.add_url_rule(
             "/interactions", "interactions", self.interactions, methods=["POST"]
@@ -56,6 +57,9 @@ class DisunityServer(quart.Quart):
     @property
     def cache(self) -> cache.ApplicationCache:
         return self.__cache
+    
+    def get_package(self, package_name):
+        return self.__packages.get(package_name, None)
 
     def error_handler(self, exc: Exception):
         raise exc
@@ -172,6 +176,7 @@ class DisunityServer(quart.Quart):
         setup = getattr(package, "setup")
 
         setup(self)
+        self.__packages[type(package).__name__] = package
 
     def register_package(self, package_class):
         contents = package_class.unpack()

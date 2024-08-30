@@ -60,6 +60,9 @@ class DisunityServer(quart.Quart):
     
     def get_package(self, package_name):
         return self.__packages.get(package_name, None)
+    
+    def get_package_names(self) -> list[str]:
+        return list(self.__packages.keys())
 
     def error_handler(self, exc: Exception):
         raise exc
@@ -176,9 +179,9 @@ class DisunityServer(quart.Quart):
         setup = getattr(package, "setup")
 
         setup(self)
-        self.__packages[type(package).__name__] = package
 
     def register_package(self, package_class):
+        self.__packages[package_class.__class__.__name__] = package_class
         contents = package_class.unpack()
         for item in contents:
             self.__cache.add_item(item)

@@ -280,17 +280,14 @@ class DisunityServer(quart.Quart):
                     "type": utils.InteractionCallbackTypes.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
                 }
                 if coroutine.ephemeral:
-                    response = {
-                        "type": utils.InteractionCallbackTypes.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-                        "data": {"flags": 64},
-                    }
+                    response["data"]["flags"] = 64
 
-                ctx.acked = True
                 async def combined_task(ctx):
                     await coroutine(ctx)
                     await self.global_after_interaction(ctx)
 
                 asyncio.create_task(combined_task(ctx))
+                ctx.acked = True
                 return jsonify(response)
 
             response = await coroutine(ctx)

@@ -34,7 +34,8 @@ class Context(Interaction):
         embeds: List[disunity.Embed] | disunity.Embed
             List of embeds to send, will all be shown at once
         components: List[ActionRow] | ActionRow:
-            List of components to send.
+            List of components to send
+            Modal can't be used here
         allowed_mentions: list
             Allowed mentions of the message
         ephemeral: bool
@@ -83,6 +84,7 @@ class Context(Interaction):
             List of embeds to send, will all be shown at once
         components: List[ActionRow] | ActionRow:
             List of components to send with the message
+            Modal can't be used here
         attachments: List[Attachment] | Attachment
             List of attachments to send with the message
         ephemeral: bool
@@ -137,6 +139,7 @@ class Context(Interaction):
     async def modal_response(self, modal: Modal):
         """
         Responds to the interaction with a modal.
+        The interaction can't be previously acknowledged.
 
         Parameters
         ----------

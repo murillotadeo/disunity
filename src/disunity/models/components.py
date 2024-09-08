@@ -20,12 +20,12 @@ class ActionRow:
 
     Parameters
     ----------
-    components : list[Button | SelectMenu | Modal]
+    components : list[Button | SelectMenu | UserTextInput]
         Components to be contained within the action row. Limited to 5 buttons per action row
-        or 1 select menu per action row.
+        or 1 select menu per action row. UserTextInput can only be used in a modal.
     """
 
-    def __init__(self, components: list[Button | SelectMenu | Modal | UserTextInput]):
+    def __init__(self, components: list[Button | SelectMenu | UserTextInput]):
         self.dict = {
             "type": 1,
             "components": [component.to_dict() for component in components],
@@ -226,6 +226,7 @@ class Modal:
         The custom id of the component
     components : list[UserTextInput]
         The inputs to ask the user.
+        Automatically put into ActionRow.
     """
 
     def __init__(self, title: str, custom_id: str, components: list[UserTextInput]):

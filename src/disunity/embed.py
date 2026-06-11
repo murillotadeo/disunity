@@ -85,7 +85,7 @@ class Embed:
 
     @property
     def image(self) -> None | dict:
-        return self.__json.get("url", None)
+        return self.__json.get("image", None)
 
     def set_image(self, image_url: str) -> Embed:
         if "image" not in self.__json:
